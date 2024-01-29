@@ -1,0 +1,65 @@
+*&---------------------------------------------------------------------*
+*& Report Z309_745_WIF_WIM2
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT Z309_745_WIF_WIM2.
+
+CLASS lcl_flight_data DEFINITION.
+  PUBLIC SECTION.
+    TYPES: BEGIN OF ty_flight_info,
+             carrid TYPE sflights-carrid,
+             connid TYPE sflights-connid,
+             cityfrom TYPE sflights-cityfrom,
+             cityto TYPE sflights-cityto,
+           END OF ty_flight_info.
+
+    METHODS:
+      get_flight_data,
+      sort_and_output.
+
+    DATA:
+      lt_flight_data TYPE TABLE OF ty_flight_info,
+      wa like line of lt_flight_data,
+      lv_airline TYPE sflight-carrid.
+
+ENDCLASS.
+
+CLASS lcl_flight_data IMPLEMENTATION.
+  METHOD get_flight_data.
+    " Retrieve flight data for the specified airline and filter by cityfrom
+    SELECT carrid connid cityfrom cityto
+      FROM sflights
+      INTO CORRESPONDING FIELDS OF TABLE me->lt_flight_data
+      WHERE carrid = me->lv_airline
+        AND cityfrom BETWEEN 'E' AND 'U'
+        AND cityfrom NE 'G'.
+  ENDMETHOD.
+
+  METHOD sort_and_output.
+    " Sort the flight data by airline and output
+    SORT me->lt_flight_data BY carrid.
+    LOOP AT me->lt_flight_data INTO wa.
+*ls_flight_info is defined as a work area within the loop.
+
+      WRITE: / 'Airline:', wa-carrid,
+             / 'From:', wa-cityfrom,
+             / 'To:', wa-cityto.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+start-of-selection.
+
+
+DATA(lo_flight_data) = NEW lcl_flight_data( ).
+
+PARAMETERS: p_rline TYPE sflights-carrid DEFAULT 'AA',
+            p_cfrom TYPE sflights-cityfrom DEFAULT 'E' OBLIGATORY,
+            p_cto TYPE sflights-cityto DEFAULT 'U' OBLIGATORY.
+
+START-OF-SELECTION.
+  lo_flight_data->lv_airline = p_rline.
+  lo_flight_data->get_flight_data( ).
+  lo_flight_data->sort_and_output( ).
