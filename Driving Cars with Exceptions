@@ -1,0 +1,255 @@
+
+
+CLASS ex_tank_leer DEFINITION INHERITING FROM cx_static_check.
+  PUBLIC SECTION.
+    METHODS: constructor IMPORTING fehlender_kraftstoff TYPE z30920stud1_prak_tankinhalt,
+      get_kraftstoff RETURNING VALUE(r_kraftstoff) TYPE z30920stud1_prak_tankinhalt.
+
+  PRIVATE SECTION.
+    DATA: gv_fehlender_kraftstoff TYPE z30920stud1_prak_tankinhalt.
+ENDCLASS.
+
+CLASS ex_tank_leer IMPLEMENTATION.
+
+*cx_static_check, the call to super->constructor in their constructors ensures
+*that any initialization defined in the constructor of cx_static_check is executed. This might
+* include setting up generic exception properties such as the exception message, which is common
+* to all exceptions inheriting from
+
+  METHOD constructor.
+    super->constructor( textid = 'Tank ist leer.  Fehlende Spritmenge: ' && fehlender_kraftstoff && ' Liter' ).
+    gv_fehlender_kraftstoff = fehlender_kraftstoff.
+  ENDMETHOD.
+  METHOD get_kraftstoff.
+    r_kraftstoff = gv_fehlender_kraftstoff.
+  ENDMETHOD.
+endclass.
+
+CLASS ex_tank_voll DEFINITION INHERITING FROM cx_static_check.
+  PUBLIC SECTION.
+    METHODS: constructor IMPORTING uebriger_kraftstoff TYPE  z30920stud1_prak_tankinhalt,
+      get_kraftstoff RETURNING VALUE(r_kraftstoff)  TYPE z30920stud1_prak_tankinhalt.
+
+  PRIVATE SECTION.
+    data: gv_uebriger_kraftstoff type  z30920stud1_prak_tankinhalt.
+ENDCLASS.
+
+CLASS ex_tank_voll IMPLEMENTATION.
+  METHOD constructor.
+    super->constructor( textid = 'Tank ist voll. Uebriger Spritmenge: ' && uebriger_kraftstoff && ' Liter' ).
+    gv_uebriger_kraftstoff = uebriger_kraftstoff.
+endmethod.
+    METHOD get_kraftstoff.
+      r_kraftstoff = gv_uebriger_kraftstoff.
+    ENDMETHOD.
+ENDCLASS.
+
+CLASS lcl_auto DEFINITION.
+
+  PUBLIC SECTION.
+
+
+    METHODS:
+      constructor IMPORTING
+                    im_kennzeichen TYPE z30920stud1_prak_kennzeichen
+                    im_hersteller  TYPE z30920stud1_prak_hersteller
+                    im_farbe       TYPE z30920stud1_prak_farbe
+                    im_tankgroesse TYPE z30920stud1_prak_tankgroesse
+                    im_verbrauch   TYPE z30920stud1_prak_verbrauch
+                    im_standort    TYPE z30920stud1_prak_city,
+
+      get_kennzeichen RETURNING VALUE(r_kennzeichen) TYPE  z30920stud1_prak_kennzeichen,
+      get_hersteller RETURNING VALUE(r_hersteller) TYPE z30920stud1_prak_hersteller,
+      get_farbe RETURNING VALUE(r_farbe) TYPE z30920stud1_prak_farbe,
+      get_standort RETURNING VALUE(r_standort) TYPE z30920stud1_prak_city,
+      get_kilometerzaehler RETURNING VALUE(r_kilometerzaehler) TYPE z30920stud1_prak_km_zaehler,
+      get_tageskilometerzaehler RETURNING VALUE(r_tageskilometerzaehler) TYPE z30920stud1_prak_tkm_zaehler,
+      get_tankgroesse RETURNING VALUE(r_tankgroesse) TYPE z30920stud1_prak_tankgroesse,
+      get_tankinhalt RETURNING VALUE(r_tankinhalt) TYPE z30920stud1_prak_tankinhalt,
+      get_verbrauch RETURNING VALUE(r_verbrauch) TYPE z30920stud1_prak_verbrauch,
+      tanken IMPORTING im_tankmenge TYPE z30920stud1_prak_tankinhalt RAISING ex_tank_voll,
+      fahren IMPORTING im_zielort TYPE z30920stud1_prak_city RAISING ex_tank_leer,
+      reset_tageskilometerstand.
+
+
+
+
+
+  PRIVATE SECTION.
+
+    DATA: kennzeichen           TYPE z30920stud1_prak_kennzeichen,
+          hersteller            TYPE z30920stud1_prak_hersteller,
+          farbe                 TYPE z30920stud1_prak_farbe,
+          standort              TYPE z30920stud1_prak_city,
+          kilometerzaehler      TYPE z30920stud1_prak_km_zaehler,
+          tageskilometerzaehler TYPE z30920stud1_prak_tkm_zaehler,
+          tankgroesse           TYPE z30920stud1_prak_tankgroesse,
+          tankinhalt            TYPE z30920stud1_prak_tankinhalt,
+          verbrauch             TYPE z30920stud1_prak_verbrauch,
+          dist                  TYPE z30920stud1_dist-distance.
+
+ENDCLASS.
+
+
+
+CLASS lcl_auto IMPLEMENTATION.
+
+*** constr just initializes the attributes beim erzeugen eines objekts der Klasse.
+  METHOD constructor.
+    kennzeichen = im_kennzeichen.
+    hersteller = im_hersteller.
+    farbe = im_farbe.
+    standort = im_standort.
+    tankgroesse = im_tankgroesse.
+    verbrauch = im_verbrauch.
+
+  ENDMETHOD.
+
+  METHOD get_kennzeichen.
+    r_kennzeichen = kennzeichen.
+  ENDMETHOD.
+
+  METHOD get_hersteller.
+    r_hersteller = hersteller.
+  ENDMETHOD.
+
+  METHOD get_farbe.
+    r_farbe = farbe.
+  ENDMETHOD.
+
+  METHOD get_standort.
+    r_standort = standort.
+  ENDMETHOD.
+
+  METHOD get_kilometerzaehler.
+    r_kilometerzaehler = kilometerzaehler.
+  ENDMETHOD.
+
+  METHOD get_tageskilometerzaehler.
+    r_tageskilometerzaehler = tageskilometerzaehler.
+  ENDMETHOD.
+
+  METHOD get_tankgroesse.
+    r_tankgroesse = tankgroesse.
+  ENDMETHOD.
+
+  METHOD get_tankinhalt.
+    r_tankinhalt = tankinhalt.
+  ENDMETHOD.
+
+  METHOD get_verbrauch.
+    r_verbrauch = verbrauch.
+  ENDMETHOD.
+
+  METHOD tanken.
+** zur zwischenspeicherung temp1 data.
+
+    IF tankinhalt + im_tankmenge > tankgroesse.
+      DATA(temp1) = tankinhalt.
+      tankinhalt = tankgroesse.
+      RAISE EXCEPTION TYPE ex_tank_voll EXPORTING uebriger_kraftstoff = im_tankmenge - ( tankgroesse - temp1 ).
+    ELSE.
+      tankinhalt = tankinhalt + im_tankmenge.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD fahren.
+    DATA: spritmenge TYPE  z30920stud1_prak_tankinhalt.
+
+    SELECT distance FROM z30920stud1_dist WHERE begining = @standort AND destination = @im_zielort INTO @dist.
+    ENDSELECT.
+    spritmenge = dist * verbrauch / 100.
+
+    IF spritmenge > tankinhalt.
+      DATA(temp2) = tankinhalt.
+
+      tankinhalt = 0.
+      RAISE EXCEPTION TYPE ex_tank_leer EXPORTING fehlender_kraftstoff = spritmenge - temp2.
+    ELSE.
+      tankinhalt = tankinhalt - spritmenge.
+    ENDIF.
+
+    tageskilometerzaehler = tageskilometerzaehler + dist.
+
+    kilometerzaehler = kilometerzaehler + dist.
+    WRITE:/'von ', standort, 'nach ', im_zielort, 'gefahren'.
+    standort = im_zielort.
+
+  ENDMETHOD.
+
+  METHOD reset_tageskilometerstand.
+    tageskilometerzaehler = 0.
+  ENDMETHOD.
+ENDCLASS.
+
+
+
+
+
+START-OF-SELECTION.
+  DATA: r_auto1 TYPE REF TO lcl_auto,
+        r_auto2 TYPE REF TO lcl_auto,
+        r_auto3 TYPE REF TO lcl_auto.
+
+  DATA: itab TYPE TABLE OF REF TO lcl_auto,
+        wa   LIKE LINE OF itab.
+
+  r_auto1 = NEW lcl_auto(
+                        im_kennzeichen = 'A-AA-1234'
+                        im_hersteller  = 'Skoda'
+                        im_farbe       = 'rot'
+                        im_tankgroesse = 40
+                        im_verbrauch   = '6.1'
+                        im_standort    = 'Augsburg').
+
+  APPEND r_auto1 TO  itab.
+
+
+   r_auto2 = NEW lcl_auto(
+                        im_kennzeichen = 'B-BB-1234'
+                        im_hersteller  = 'BMW'
+                        im_farbe       = 'blau'
+                        im_tankgroesse = 60
+                        im_verbrauch   = '7.2'
+                        im_standort    = 'Augsburg').
+
+  APPEND r_auto2 TO  itab.
+
+
+  r_auto3 = NEW lcl_auto(
+                        im_kennzeichen = 'UL-UL-1234'
+                        im_hersteller  = 'Mercedes'
+                        im_farbe       = 'silber'
+                        im_tankgroesse = 70
+                        im_verbrauch   = '9.2'
+                        im_standort    = 'Augsburg').
+
+  APPEND r_auto2 TO  itab.
+
+  try.
+  r_auto1->tanken( im_tankmenge = 10 ).
+
+  r_auto1->fahren( im_zielort = 'München' ).
+  r_auto1->fahren( im_zielort = 'Augsburg' ).
+
+
+
+  catch ex_tank_leer into data(e_txt).
+  write: / 'Tank Leer!' , e_txt->get_kraftstoff( ), 'Liter zu wenig um die strecke zu fahren'.
+  catch ex_tank_voll into data(e_txt1).
+  write: / 'Tank Voll! ', e_txt1->get_kraftstoff( ), 'Liter zu viel getankt'.
+  endtry.
+
+  FORM ausgabe.
+  LOOP AT itab INTO wa.
+    WRITE: / 'Hersteller ', AT 20 wa->get_hersteller( ),
+           / 'Kennzeichen ', AT 20 wa->get_kennzeichen( ),
+           / 'Farbe ', AT 20 wa->get_farbe( ),
+           / 'Standort ',AT 20 wa->get_standort( ),
+           /'KM-Stand ', AT 20 wa->get_kilometerzaehler( ),
+           / 'Tageszähler ',AT 19 wa->get_tageskilometerzaehler( ),
+           / 'Tankgröße ',AT 20 wa->get_tankgroesse( ),
+           / 'Tankinhalt ',AT 19 wa->get_tankinhalt( ),
+           / 'Verbrauch ', AT 20 wa->get_verbrauch( ),/,/,/.
+  ENDLOOP.
+ENDFORM.
