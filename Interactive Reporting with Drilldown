@@ -1,0 +1,158 @@
+TABLES: sflight, spfli, scarr.
+
+
+
+
+TYPES: BEGIN OF t_flight,
+         carrname TYPE scarr-carrname,
+         connid   TYPE spfli-connid,
+         cityto   TYPE spfli-cityto,
+         cityfrom TYPE spfli-cityto,
+         fldate   TYPE sflight-fldate,
+         price    TYPE sflight-price,
+         currency TYPE sflight-currency,
+         belegung TYPE p DECIMALS 2,
+       END OF t_flight.
+
+DATA: itab       TYPE TABLE OF t_flight,
+      wa         LIKE LINE OF itab,
+      stern      TYPE c LENGTH 1,
+      sortierung TYPE c VALUE 'aufsteigend',
+      wa2        TYPE scustom.
+
+INITIALIZATION.
+
+  SELECT-OPTIONS s_cfrom FOR wa-cityfrom NO INTERVALS.
+  s_cfrom-low = 'FRANKFURT'.
+  APPEND s_cfrom TO s_cfrom.
+
+  SELECT-OPTIONS s_cto FOR wa-cityto NO INTERVALS.
+  s_cto-low = 'NEW YORK'.
+  APPEND s_cto TO s_cto.
+
+  SELECT-OPTIONS s_date FOR wa-fldate.
+  s_date-low = '20210101'.
+  s_date-high = '20241231'.
+  APPEND s_date TO s_date.
+
+TOP-OF-PAGE.
+  WRITE: /,  'Unsortierte Liste. Zum sortieren der Liste: <F4> Preis, <F5> Flugdatum, <F6> Belegung',/.
+
+
+
+
+TOP-OF-PAGE DURING LINE-SELECTION.
+  WRITE:/, sortierung.
+
+
+
+START-OF-SELECTION.
+
+  SELECT carrname, sp~connid
+          ,cityfrom, cityto
+          ,fldate, price, currency
+          ,division( sf~seatsocc * 100, sf~seatsmax,1 ) AS belegung
+    FROM sflight AS sf
+    JOIN scarr AS sc ON sf~carrid = sc~carrid
+    JOIN spfli AS sp ON sf~carrid = sp~carrid
+    WHERE cityfrom IN @s_cfrom
+    AND cityto IN @s_cto
+    AND fldate BETWEEN @s_date-low AND @s_date-high
+
+    INTO CORRESPONDING FIELDS OF @wa.
+
+    APPEND wa TO itab.
+  ENDSELECT.
+  PERFORM ausgabe.
+
+AT LINE-SELECTION.
+  WRITE: 'Alle Buchungen für den Flug', wa-connid, 'von ', wa-cityfrom,
+          'nach ', wa-cityto, 'am ', wa-fldate,/.
+
+  WRITE: / 'Anrede         ', 'Name                     ', 'Straße                        ',
+  'PLZ       ', 'Stadt                    ','Land'.
+
+  SELECT name, form, street, postcode, city, country FROM scustom AS sc
+  JOIN sbook AS sb ON sc~id = sb~customid
+  WHERE sb~fldate = @wa-fldate AND sb~connid = @wa-connid
+  INTO CORRESPONDING FIELDS OF @wa2.
+
+    WRITE: / wa2-name
+            ,wa2-street,wa2-postcode
+            ,wa2-city, wa2-country.
+  ENDSELECT.
+
+*** Behandlung der drei Fällen: festlegung der Nummerierung der Verzweigungslisten:
+  IF sy-lsind = 1.
+    WRITE:/ 'Daten sind ', sortierung ,' nach dem Preis sortiert!', 'Aktuelle Liste', sy-lsind.
+    WRITE:/ 'Zum sortieren der Liste: <F4> Preis, <F5> Flugdatum, <F6> Belegung'.
+  ELSEIF sy-lsind = 2.
+    WRITE:/ 'Daten sind ', sortierung ,' nach dem Flugdatum sortiert!', 'Aktuelle Liste', sy-lsind.
+    WRITE:/ 'Zum sortieren der Liste: <F4> Preis, <F5> Flugdatum, <F6> Belegung'.
+  ELSEIF sy-lsind = 3.
+    WRITE:/ 'Daten sind ', sortierung ,' nach der Belegung sortiert!', 'Aktuelle Liste', sy-lsind.
+    WRITE:/ 'Zum sortieren der Liste: <F4> Preis, <F5> Flugdatum, <F6> Belegung'.
+  ENDIF.
+  ULINE.
+
+*** Taste F4:
+AT PF4. "Nachdem man die f4 taste drückz wird das folgende event erzeugt!
+  sy-lsind = 1.
+  IF sortierung = 'aufsteigend'.
+    SORT itab BY price ASCENDING.
+    sortierung = 'absteigend'.
+  ELSE.
+    SORT itab BY price DESCENDING.
+    sortierung = 'aufsteigend'.
+  ENDIF.
+  PERFORM ausgabe.
+
+**** at taste F5:
+
+AT PF5.
+  sy-lsind = 2.
+  IF sortierung = 'aufsteigend'.
+    SORT itab BY fldate ASCENDING.
+    sortierung = 'absteigend'.
+  ELSE.
+    SORT itab BY fldate DESCENDING.
+    sortierung = 'aufsteigend'.
+  ENDIF.
+  PERFORM ausgabe.
+
+AT PF6.
+  sy-lsind = 3.
+  IF sortierung = 'aufsteigend'.
+    SORT itab BY belegung ASCENDING.
+    sortierung = 'absteigend'.
+  ELSE.
+    SORT itab BY belegung DESCENDING.
+    sortierung = 'aufsteigend'.
+  ENDIF.
+  PERFORM ausgabe.
+
+
+
+END-OF-SELECTION.
+
+
+FORM ausgabe.
+  LOOP AT itab INTO wa.
+
+    IF wa-belegung > 80.
+      stern = '*'.
+    ELSE.
+      stern = ''.
+
+    ENDIF.
+    WRITE: / ' ', wa-carrname
+        ,wa-connid
+        ,wa-cityfrom
+        ,wa-cityto, wa-fldate, wa-price, wa-currency, wa-belegung, '%',  stern.
+    HIDE: wa-connid, wa-fldate.
+*In your case, you should use HIDE to store the flight connection ID (wa-connid)
+*and flight date (wa-fldate) for each line displayed. When a user selects a line,
+* these hidden values help identify the specific flight and fetch related bookings.
+  ENDLOOP.
+
+ENDFORM.
