@@ -1,0 +1,128 @@
+CLASS lcl_airplane DEFINITION.
+
+  PUBLIC SECTION.
+    METHODS: set_attributes
+      IMPORTING
+        im_name      TYPE string
+        im_planetype TYPE string,
+      get_attributes,
+      check_planetype
+        RAISING zcx_745_wi_planetype,
+      check_flightname
+        RAISING zcx_608_planetype,
+      add_seats
+        IMPORTING im_add TYPE i
+        RAISING   zcx_745_wi_planetype.
+
+  PRIVATE SECTION.
+    DATA: gv_name      TYPE string,
+          gv_planetype TYPE string,
+          gv_max_seats TYPE i VALUE 300,
+          gv_occ_seats TYPE i VALUE 255.
+ENDCLASS.
+
+CLASS lcl_airplane IMPLEMENTATION.
+  METHOD set_attributes.
+    gv_name = im_name.
+    gv_planetype = im_planetype.
+  ENDMETHOD.
+
+  METHOD get_attributes.
+    WRITE: / 'Flight name: ', gv_name ,
+            'Flight type: ', gv_planetype.
+
+    IF gv_occ_seats <= gv_max_seats.
+      WRITE: / 'Number of occupied seats: ', gv_occ_seats.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD check_planetype.
+    TRANSLATE gv_planetype TO UPPER CASE.
+    IF gv_planetype <> 'BOEING 737' AND gv_planetype <> 'AIRBUS 380'.
+      RAISE EXCEPTION TYPE zcx_745_wi_wrong_planetype
+        EXPORTING
+          planetype = gv_planetype.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD check_flightname.
+    TRANSLATE gv_name TO UPPER CASE.
+    IF gv_name <> 'HAMBURG' AND gv_name <> 'MUNICH' AND gv_name <> 'MÜNCHEN'.
+      RAISE EXCEPTION TYPE zcx_608_flightname EXPORTING flightname = gv_name.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD add_seats.
+    gv_occ_seats = gv_occ_seats + im_add.
+    IF gv_occ_seats > gv_max_seats.
+      RAISE EXCEPTION TYPE zcx_745_wi_max_seats
+        EXPORTING
+          max_seats = gv_max_seats.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+
+parameters:fl_name type string,
+pl_type type string,
+add_seat type i.
+
+data: r_plane type ref to lcl_airplane,
+it_plane_list type table of ref to lcl_airplane,
+lo_excp type ref to ZCX_745_WI_PLANETYPE,
+lv_excp_text type string.
+
+start-of-selection.
+
+create object r_plane.
+r_plane->set_attributes(
+exporting
+im_name = fl_name
+im_planetype = pl_type ).
+
+*TRY: Enclose code that might raise an exception.
+*CATCH: Specify the type of exception you want to handle. Inside the CATCH block, you can define how
+* to respond to the exception, such as displaying an error message or cleaning up resources.
+*RETURN: Often used within CATCH blocks to exit the current processing when an exception is caught,
+* especially in scripts or reports where further execution depends on successful completion of the
+* prior steps.
+try.
+r_plane->check_planetype( ).
+catch ZCX_745_WI_PLANETYPE into lo_excp.
+
+if lo_excp is not initial.
+lv_excp_text = lo_excp->get_text( ).
+write: lv_excp_text, /.
+return.
+endif.
+endtry.
+
+
+
+try.
+r_plane->add_seats( im_add = add_seat ).
+catch ZCX_745_WI_PLANETYPE into lo_excp.
+
+if lo_excp is not initial.
+lv_excp_text = lo_excp->get_text( ).
+write: lv_excp_text, /.
+return.
+endif.
+endtry.
+
+  TRY.
+      r_plane->check_flightname( ).
+    CATCH zcx_745_WI_planetype INTO lo_excp.
+      IF lo_excp IS NOT INITIAL.
+        lv_excp_text = lo_excp->get_text( ).
+        WRITE: lv_excp_text, /.
+        RETURN.
+      ENDIF.
+  ENDTRY.
+
+
+r_plane->get_attributes( ).
+
+
