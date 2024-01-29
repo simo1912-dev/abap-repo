@@ -1,0 +1,382 @@
+CLASS ex_tank_leer DEFINITION INHERITING FROM cx_static_check.
+  PUBLIC SECTION.
+    METHODS: constructor IMPORTING fehlender_kraftstoff TYPE z30920stud1_prak_tankinhalt,
+      get_kraftstoff RETURNING VALUE(r_kraftstoff) TYPE z30920stud1_prak_tankinhalt.
+
+  PRIVATE SECTION.
+    DATA: gv_fehlender_kraftstoff TYPE z30920stud1_prak_tankinhalt.
+ENDCLASS.
+
+CLASS ex_tank_leer IMPLEMENTATION.
+
+*cx_static_check, the call to super->constructor in their constructors ensures
+*that any initialization defined in the constructor of cx_static_check is executed. This might
+* include setting up generic exception properties such as the exception message, which is common
+* to all exceptions inheriting from
+
+  METHOD constructor.
+    super->constructor( textid = 'Tank ist leer.  Fehlende Spritmenge: ' && fehlender_kraftstoff && ' Liter' ).
+    gv_fehlender_kraftstoff = fehlender_kraftstoff.
+  ENDMETHOD.
+  METHOD get_kraftstoff.
+    r_kraftstoff = gv_fehlender_kraftstoff.
+  ENDMETHOD.
+endclass.
+
+CLASS ex_tank_voll DEFINITION INHERITING FROM cx_static_check.
+  PUBLIC SECTION.
+    METHODS: constructor IMPORTING uebriger_kraftstoff TYPE  z30920stud1_prak_tankinhalt,
+      get_kraftstoff RETURNING VALUE(r_kraftstoff)  TYPE z30920stud1_prak_tankinhalt.
+
+  PRIVATE SECTION.
+    data: gv_uebriger_kraftstoff type  z30920stud1_prak_tankinhalt.
+ENDCLASS.
+
+CLASS ex_tank_voll IMPLEMENTATION.
+  METHOD constructor.
+    super->constructor( textid = 'Tank ist voll. Uebriger Spritmenge: ' && uebriger_kraftstoff && ' Liter' ).
+    gv_uebriger_kraftstoff = uebriger_kraftstoff.
+endmethod.
+    METHOD get_kraftstoff.
+      r_kraftstoff = gv_uebriger_kraftstoff.
+    ENDMETHOD.
+ENDCLASS.
+
+CLASS lcl_auto DEFINITION.
+
+  PUBLIC SECTION.
+EVENTS: e_unfall, e_tank_leer.
+
+    METHODS:
+    m_unfall for event e_unfall of lcl_auto,
+    m_tank_leer for event e_tank_leer of lcl_auto,
+      constructor IMPORTING
+                    im_kennzeichen TYPE z30920stud1_prak_kennzeichen
+                    im_hersteller  TYPE z30920stud1_prak_hersteller
+                    im_farbe       TYPE z30920stud1_prak_farbe
+                    im_tankgroesse TYPE z30920stud1_prak_tankgroesse
+                    im_verbrauch   TYPE z30920stud1_prak_verbrauch
+                    im_standort    TYPE z30920stud1_prak_city,
+
+      get_kennzeichen RETURNING VALUE(r_kennzeichen) TYPE  z30920stud1_prak_kennzeichen,
+      get_hersteller RETURNING VALUE(r_hersteller) TYPE z30920stud1_prak_hersteller,
+      get_farbe RETURNING VALUE(r_farbe) TYPE z30920stud1_prak_farbe,
+      get_standort RETURNING VALUE(r_standort) TYPE z30920stud1_prak_city,
+      get_kilometerzaehler RETURNING VALUE(r_kilometerzaehler) TYPE z30920stud1_prak_km_zaehler,
+      get_tageskilometerzaehler RETURNING VALUE(r_tageskilometerzaehler) TYPE z30920stud1_prak_tkm_zaehler,
+      get_tankgroesse RETURNING VALUE(r_tankgroesse) TYPE z30920stud1_prak_tankgroesse,
+      get_tankinhalt RETURNING VALUE(r_tankinhalt) TYPE z30920stud1_prak_tankinhalt,
+      get_verbrauch RETURNING VALUE(r_verbrauch) TYPE z30920stud1_prak_verbrauch,
+      tanken IMPORTING im_tankmenge TYPE z30920stud1_prak_tankinhalt,
+      fahren IMPORTING im_zielort TYPE z30920stud1_prak_city,
+      reset_tageskilometerstand,
+      unfall.
+
+
+
+
+
+  PRIVATE SECTION.
+
+    DATA: kennzeichen           TYPE z30920stud1_prak_kennzeichen,
+          hersteller            TYPE z30920stud1_prak_hersteller,
+          farbe                 TYPE z30920stud1_prak_farbe,
+          standort              TYPE z30920stud1_prak_city,
+          kilometerzaehler      TYPE z30920stud1_prak_km_zaehler,
+          tageskilometerzaehler TYPE z30920stud1_prak_tkm_zaehler,
+          tankgroesse           TYPE z30920stud1_prak_tankgroesse,
+          tankinhalt            TYPE z30920stud1_prak_tankinhalt,
+          verbrauch             TYPE z30920stud1_prak_verbrauch,
+          dist                  TYPE z30920stud1_dist-distance.
+
+ENDCLASS.
+
+
+
+CLASS lcl_auto IMPLEMENTATION.
+
+*** constr just initializes the attributes beim erzeugen eines objekts der Klasse.
+  METHOD constructor.
+    kennzeichen = im_kennzeichen.
+    hersteller = im_hersteller.
+    farbe = im_farbe.
+    standort = im_standort.
+    tankgroesse = im_tankgroesse.
+    verbrauch = im_verbrauch.
+
+  ENDMETHOD.
+  method m_unfall.
+  WRITE:/, 'Polizei unterwegs'.
+  endmethod.
+
+  method m_tank_leer.
+  write:/, 'Tank ist leer'.
+  endmethod.
+
+  METHOD get_kennzeichen.
+    r_kennzeichen = kennzeichen.
+  ENDMETHOD.
+
+  METHOD get_hersteller.
+    r_hersteller = hersteller.
+  ENDMETHOD.
+
+  METHOD get_farbe.
+    r_farbe = farbe.
+  ENDMETHOD.
+
+  METHOD get_standort.
+    r_standort = standort.
+  ENDMETHOD.
+
+  METHOD get_kilometerzaehler.
+    r_kilometerzaehler = kilometerzaehler.
+  ENDMETHOD.
+
+  METHOD get_tageskilometerzaehler.
+    r_tageskilometerzaehler = tageskilometerzaehler.
+  ENDMETHOD.
+
+  METHOD get_tankgroesse.
+    r_tankgroesse = tankgroesse.
+  ENDMETHOD.
+
+  METHOD get_tankinhalt.
+    r_tankinhalt = tankinhalt.
+  ENDMETHOD.
+
+  METHOD get_verbrauch.
+    r_verbrauch = verbrauch.
+  ENDMETHOD.
+
+  METHOD tanken.
+** zur zwischenspeicherung temp1 data.
+
+    IF tankinhalt + im_tankmenge > tankgroesse.
+      DATA(temp1) = tankinhalt.
+      tankinhalt = tankgroesse.
+      RAISE EXCEPTION TYPE ex_tank_voll EXPORTING uebriger_kraftstoff = im_tankmenge - ( tankgroesse - temp1 ).
+    ELSE.
+      tankinhalt = tankinhalt + im_tankmenge.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD fahren.
+    DATA: spritmenge TYPE  z30920stud1_prak_tankinhalt.
+
+    SELECT distance FROM z30920stud1_dist WHERE begining = @standort AND destination = @im_zielort INTO @dist.
+    ENDSELECT.
+    spritmenge = dist * verbrauch / 100.
+
+    IF spritmenge > tankinhalt.
+      DATA(temp2) = tankinhalt.
+
+      tankinhalt = 0.
+      RAISE EVENT e_tank_leer.
+    ELSE.
+      tankinhalt = tankinhalt - spritmenge.
+    ENDIF.
+
+
+
+    tageskilometerzaehler = tageskilometerzaehler + dist.
+
+    kilometerzaehler = kilometerzaehler + dist.
+    WRITE:/'von ', standort, 'nach ', im_zielort, 'gefahren'.
+    standort = im_zielort.
+
+        "EVENT E_UNFALL
+    DATA rand_num TYPE i.
+
+      CALL FUNCTION 'QF05_RANDOM_INTEGER'
+       EXPORTING
+         RAN_INT_MAX         = 3
+         RAN_INT_MIN         = 1
+       IMPORTING
+         RAN_INT             = rand_num
+       EXCEPTIONS
+         INVALID_INPUT       = 1
+         OTHERS              = 2
+                .
+      IF rand_num = 3.
+      RAISE EVENT E_UNFALL.
+    ELSE.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD reset_tageskilometerstand.
+    tageskilometerzaehler = 0.
+  ENDMETHOD.
+
+    METHOD unfall.
+    WRITE: /, 'LCL_AUTO: UNFALL!'.
+    RAISE EVENT e_unfall.
+  ENDMETHOD.
+ENDCLASS.
+
+
+class lcl_polizei definition.
+
+public section.
+events: loeschen.
+methods: m_unfall for event e_unfall of lcl_auto importing sender.
+
+*sender: Der Parameter sender in der Methode m_unfall ist eine Referenz auf das Objekt, das das
+*Ereignis ausgelöst hat. In diesem Fall wäre es eine Instanz von lcl_auto, die einen Unfall "erlebt" hat.
+
+data: unfallref type ref to lcl_auto.
+endclass.
+
+
+
+class lcl_polizei implementation.
+method m_unfall.
+write:/, 'LCL_POLIZEI: UNFALL!!!'.
+unfallref = sender.
+raise event loeschen.
+endmethod.
+endclass.
+
+
+
+
+
+class lcl_adac definition.
+
+public section.
+
+*m_tank_leer: Eine Methode, die reagiert, wenn das Ereignis e_tank_leer ausgelöst wird.
+*Der sender ist hier das Auto, dessen Tank leer ist. Diese Methode könnte Maßnahmen ergreifen, wie z.B.
+*das Auto mit Kraftstoff zu versorgen.
+
+methods: m_loeschen for event loeschen of lcl_polizei importing sender,
+m_tank_leer for event e_tank_leer of lcl_auto importing sender,
+mitglied_werden importing ref_var type ref to lcl_auto,
+mitglieder_ausgeben.
+
+private section.
+
+
+data: reg_tab type table of ref to lcl_auto,
+wa like line of reg_tab.
+endclass.
+
+
+class lcl_adac implementation.
+
+method m_loeschen.
+data: refvar_polizei type ref to lcl_auto.
+    refvar_polizei = sender->unfallref.
+loop at reg_tab into wa.
+if wa->get_kennzeichen( ) = refvar_polizei->get_kennzeichen( ).
+delete reg_tab index sy-tabix.
+exit.
+endif.
+endloop.
+endmethod.
+
+method m_tank_leer.
+write:/, 'Tank Leer, ADAC Anrufen'.
+sender->tanken( 5 ).
+endmethod.
+
+method mitglied_werden.
+append ref_var to reg_tab.
+endmethod.
+
+method mitglieder_ausgeben.
+ WRITE: /, 'ADAC Mitglieder:'.
+    LOOP AT reg_tab INTO wa.
+      WRITE:/ wa->get_kennzeichen( ).
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+
+DATA: auto1   TYPE REF TO lcl_auto,
+      auto2  TYPE REF TO lcl_auto,
+      auto3  TYPE REF TO lcl_auto,
+      auto4  TYPE REF TO lcl_auto,
+      r_event type ref to lcl_adac,
+      r_event2 type ref to lcl_polizei,
+      ref_itab type table of ref to lcl_auto,
+      wa like line of ref_itab.
+
+START-OF-SELECTION.
+
+  CREATE OBJECT auto1
+    EXPORTING
+      im_kennzeichen = 'A AA 1234'
+      im_hersteller  = 'Porsche'
+      im_farbe       = 'Silber'
+      im_tankgroesse = '80'
+      im_verbrauch   = '15'
+      im_standort    = 'Augsburg'.
+
+    CREATE OBJECT auto2
+    EXPORTING
+      im_kennzeichen = 'B BB 1234'
+      im_hersteller  = 'Audi'
+      im_farbe       = 'Rot'
+      im_tankgroesse = '70'
+      im_verbrauch   = '9'
+      im_standort    = 'Augsburg'.
+
+    CREATE OBJECT auto3
+    EXPORTING
+      im_kennzeichen = 'C CC 1234'
+      im_hersteller  = 'Mercedes'
+      im_farbe       = 'Schwarz'
+      im_tankgroesse = '75'
+      im_verbrauch   = '11'
+      im_standort    = 'Augsburg'.
+
+    CREATE OBJECT auto4
+    EXPORTING
+      im_kennzeichen = 'D DD 1234'
+      im_hersteller  = 'BMW'
+      im_farbe       = 'Weis'
+      im_tankgroesse = '60'
+      im_verbrauch   = '8'
+      im_standort    = 'Augsburg'.
+
+
+APPEND auto1 TO ref_itab.
+APPEND auto2 TO ref_itab.
+APPEND auto3 TO ref_itab.
+APPEND auto4 TO ref_itab.
+
+
+r_event = new lcl_adac( ).
+r_event2 = new lcl_polizei( ).
+
+*  CREATE OBJECT r_auto
+*    EXPORTING
+*      im_kennzeichen = 'A AA 1234'
+*      im_hersteller  = 'Porsche'
+*      im_farbe       = 'Silber'
+*      im_tankgroesse = '80'
+*      im_verbrauch   = '15'
+*      im_standort    = 'Augsburg'.
+
+*Die SET HANDLER-Anweisungen in ABAP werden verwendet, um Ereignishandler
+*zu definieren und diese mit bestimmten Ereignissen zu verknüpfen.
+
+set handler r_event->m_tank_leer for auto1.
+set handler r_event2->m_unfall for auto1.
+set handler r_event->m_loeschen for r_event2.
+
+r_event->mitglied_werden( ref_var = auto1 ).
+r_event->mitglied_werden( ref_var = auto2 ).
+r_event->mitglied_werden( ref_var = auto3 ).
+r_event->mitglied_werden( ref_var = auto4 ).
+
+r_event->mitglieder_ausgeben( ).
+auto1->UNFALL( ).
+r_event->mitglieder_ausgeben( ).
+
+
+END-OF-SELECTION.
